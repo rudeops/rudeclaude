@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Formatage
+        run: test -z "$(gofmt -l .)"
+      - name: Analyse
+        run: go vet ./...
+      - name: Tests
+        run: go test ./...
+      - name: Compilation
+        run: go build -o rudeclaude .
