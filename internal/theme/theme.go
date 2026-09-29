@@ -6,6 +6,8 @@ const (
 	OrangeHex = "#FF8C28"
 	RedHex    = "#EF4444"
 	GreenHex  = "#22C55E"
+	BlueHex   = "#60A5FA"
+	PurpleHex = "#A78BFA"
 	WhiteHex  = "#F5F5F5"
 	GreyHex   = "#9CA3AF"
 	DimHex    = "#6B7280"

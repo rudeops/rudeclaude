@@ -38,6 +38,10 @@ type BreakdownRow struct {
 	Percent     float64 `json:"percent"`
 }
 
+type Breakdown struct {
+	Rows []BreakdownRow `json:"rows"`
+}
+
 type Money struct {
 	AmountMinor int64  `json:"amount_minor"`
 	Currency    string `json:"currency"`
@@ -59,12 +63,10 @@ type Spend struct {
 }
 
 type Report struct {
-	Spend             *Spend  `json:"spend"`
-	FiveHour          *Window `json:"five_hour"`
-	SevenDay          *Window `json:"seven_day"`
-	SevenDayBreakdown *struct {
-		Rows []BreakdownRow `json:"rows"`
-	} `json:"seven_day_breakdown"`
+	Spend             *Spend     `json:"spend"`
+	FiveHour          *Window    `json:"five_hour"`
+	SevenDay          *Window    `json:"seven_day"`
+	SevenDayBreakdown *Breakdown `json:"seven_day_breakdown"`
 }
 
 type credentials struct {

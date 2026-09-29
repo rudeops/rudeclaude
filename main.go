@@ -12,7 +12,7 @@ import (
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 func main() {
 	interval := flag.Duration("interval", time.Minute, "délai entre deux appels à l'API (minimum 30s)")

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/rudeops/rudeclaude/internal/activity"
+	"github.com/rudeops/rudeclaude/internal/rtk"
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
 
@@ -12,7 +13,7 @@ func demoReport(now time.Time) *usage.Report {
 	pct := math.Min(100, float64(now.Unix()%60)*110/60)
 	fiveReset := now.Add(3 * time.Hour)
 	weekReset := now.Add(4 * 24 * time.Hour)
-	return &usage.Report{
+	r := &usage.Report{
 		FiveHour: &usage.Window{Utilization: pct, ResetsAt: &fiveReset},
 		SevenDay: &usage.Window{Utilization: pct * 0.6, ResetsAt: &weekReset},
 		Spend: &usage.Spend{
@@ -21,6 +22,23 @@ func demoReport(now time.Time) *usage.Report {
 			Limit:   &usage.Money{AmountMinor: 2000, Currency: "EUR", Exponent: 2},
 		},
 	}
+	r.SevenDayBreakdown = &usage.Breakdown{Rows: []usage.BreakdownRow{
+		{Key: "claude_code", DisplayName: "Claude Code", Percent: 58},
+		{Key: "chat", DisplayName: "Chats", Percent: 27},
+		{Key: "cowork", DisplayName: "Cowork", Percent: 15},
+		{Key: "other", DisplayName: "Other", Percent: 0},
+	}}
+	return r
+}
+
+func demoRTK(now time.Time) *rtk.Stats {
+	s := &rtk.Stats{Total: 6_040_000}
+	saved := [rtk.Days]int64{182_000, 240_000, 96_000, 12_000, 0, 204_000, 131_000}
+	today := now.UTC().Truncate(24 * time.Hour)
+	for i := range s.Days {
+		s.Days[i] = rtk.Day{Date: today.AddDate(0, 0, i-(rtk.Days-1)), Saved: saved[i], Input: saved[i] * 100 / 91}
+	}
+	return s
 }
 
 func demoSnapshot(now time.Time) activity.Snapshot {

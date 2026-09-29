@@ -2,6 +2,7 @@ package ui
 
 import (
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -106,9 +107,36 @@ func (m textModel) View() string {
 			boldStyle.Render(replies)+greyStyle.Render(" réponses · ")+
 			boldStyle.Render(output)+greyStyle.Render(" tokens générés · ")+
 			boldStyle.Render(cache+" %")+greyStyle.Render(" servis par le cache"),
-		"",
+		"")
+
+	if products := m.products(); len(products) > 0 {
+		var legend []string
+		for _, p := range products {
+			legend = append(legend, productStyle(p.key).Render("●")+" "+greyStyle.Render(p.name)+" "+hiStyle.Render(strconv.Itoa(int(math.Round(p.percent)))+" %"))
+		}
+		lines = append(lines, spread(labelStyle.Render("SEMAINE PAR PRODUIT"), strings.Join(legend, "  ")), productBar(products), "")
+	}
+
+	lines = append(lines,
 		spread(labelStyle.Render("ACTIVITÉ · 60 MIN"), greyStyle.Render(m.activityText())),
 		sparkline(m.snap.Minutes[:]), "")
+
+	if r, ok := m.rtkInfo(); ok {
+		var bars, letters []string
+		for i, v := range r.days {
+			st, lt := ochreStyle, dimStyle
+			if i == len(r.days)-1 {
+				st, lt = yellowStyle, hiStyle
+			}
+			bars = append(bars, level(v, slices.Max(r.days[:]), st))
+			letters = append(letters, lt.Render(r.letters[i]))
+		}
+		lines = append(lines,
+			spread(labelStyle.Render("RTK · 7 JOURS"), greyStyle.Render(r.rate+" % en moyenne")),
+			spread(boldStyle.Render(r.today)+greyStyle.Render(" économisés aujourd'hui · ")+
+				boldStyle.Render(r.total)+greyStyle.Render(" au total"), strings.Join(bars, " ")),
+			spread("", strings.Join(letters, " ")), "")
+	}
 
 	lines = append(lines, labelStyle.Render("SESSIONS"))
 	sessions := m.sessions()
@@ -173,27 +201,58 @@ func bar(used, elapsed float64) string {
 	return b.String()
 }
 
-func sparkline(values []float64) string {
-	levels := []rune("▁▂▃▄▅▆▇█")
-	peak := 0.0
-	for _, v := range values {
-		peak = math.Max(peak, v)
+var levels = []rune("▁▂▃▄▅▆▇█")
+
+func level(v, peak float64, st lipgloss.Style) string {
+	if v <= 0 || peak == 0 {
+		return trackStyle.Render("▁")
 	}
+	n := len(levels)
+	return st.Render(string(levels[min(n-1, int(v/peak*float64(n-1)+0.5))]))
+}
+
+func sparkline(values []float64) string {
+	peak := slices.Max(values)
 	var b strings.Builder
 	for i, v := range values {
-		if v <= 0 || peak == 0 {
-			b.WriteString(trackStyle.Render("▁"))
-			continue
-		}
-		n := len(levels)
-		lvl := min(n-1, int(v/peak*float64(n-1)+0.5))
 		st := yellowStyle
 		if i < len(values)*2/3 {
 			st = ochreStyle
 		}
-		b.WriteString(st.Render(string(levels[lvl])))
+		b.WriteString(level(v, peak, st))
 	}
 	return b.String()
+}
+
+func productStyle(key string) lipgloss.Style {
+	switch key {
+	case "claude_code":
+		return yellowStyle
+	case "chat":
+		return style(theme.BlueHex)
+	case "cowork":
+		return style(theme.PurpleHex)
+	}
+	return dimStyle
+}
+
+func productBar(products []productInfo) string {
+	total := 0.0
+	for _, p := range products {
+		total += p.percent
+	}
+	avail := textWidth - (len(products) - 1)
+	var parts []string
+	used := 0
+	for i, p := range products {
+		n := max(1, int(math.Round(p.percent/total*float64(avail))))
+		if i == len(products)-1 {
+			n = max(1, avail-used)
+		}
+		used += n
+		parts = append(parts, productStyle(p.key).Render(strings.Repeat("━", n)))
+	}
+	return strings.Join(parts, " ")
 }
 
 func sessionDot(s sessionInfo) string {

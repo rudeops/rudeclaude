@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rudeops/rudeclaude/internal/activity"
+	"github.com/rudeops/rudeclaude/internal/rtk"
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
 
@@ -31,6 +32,8 @@ type core struct {
 	now         time.Time
 	tracker     *activity.Tracker
 	snap        activity.Snapshot
+	rtkWatch    rtk.Watcher
+	rtk         *rtk.Stats
 }
 
 func newCore(interval time.Duration, demo bool) *core {
@@ -84,10 +87,13 @@ func (c *core) refresh() {
 	if c.demo {
 		c.report, c.fetchedAt = demoReport(c.now), c.now
 		c.snap = demoSnapshot(c.now)
+		c.rtk = demoRTK(c.now)
 		return
 	}
 	c.tracker.Poll(c.now)
 	c.snap = c.tracker.Snapshot(c.now)
+	c.rtkWatch.Poll(c.now)
+	c.rtk = c.rtkWatch.Stats()
 }
 
 type limitInfo struct {
@@ -245,6 +251,59 @@ func (c *core) activityText() string {
 		return "au calme"
 	}
 	return formatTokens(c.snap.Rate) + " tokens/min"
+}
+
+type productInfo struct {
+	key, name string
+	percent   float64
+}
+
+var productNames = map[string]string{
+	"claude_code": "Claude Code",
+	"chat":        "Chat",
+	"cowork":      "Cowork",
+	"other":       "Autre",
+}
+
+func (c *core) products() []productInfo {
+	if c.report == nil || c.report.SevenDayBreakdown == nil {
+		return nil
+	}
+	var out []productInfo
+	for _, r := range c.report.SevenDayBreakdown.Rows {
+		if r.Percent <= 0 {
+			continue
+		}
+		name := productNames[r.Key]
+		if name == "" {
+			name = r.DisplayName
+		}
+		out = append(out, productInfo{key: r.Key, name: name, percent: r.Percent})
+	}
+	return out
+}
+
+type rtkInfo struct {
+	today, total, rate string
+	days               [rtk.Days]float64
+	letters            [rtk.Days]string
+}
+
+var dayLetters = [7]string{"D", "L", "M", "M", "J", "V", "S"}
+
+func (c *core) rtkInfo() (info rtkInfo, ok bool) {
+	s := c.rtk
+	if s == nil {
+		return info, false
+	}
+	info.today = formatTokens(float64(s.Today()))
+	info.total = formatTokens(float64(s.Total))
+	info.rate = fmt.Sprint(int(math.Round(s.Rate() * 100)))
+	for i, d := range s.Days {
+		info.days[i] = float64(d.Saved)
+		info.letters[i] = dayLetters[d.Date.Weekday()]
+	}
+	return info, true
 }
 
 func (c *core) credits() string {

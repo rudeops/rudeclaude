@@ -28,6 +28,8 @@ var (
 	orange  = hex(0xFF8C28)
 	red     = hex(0xEF4444)
 	green   = hex(0x22C55E)
+	blue    = hex(0x60A5FA)
+	purple  = hex(0xA78BFA)
 )
 
 func fillColor(used float64) color.Color {

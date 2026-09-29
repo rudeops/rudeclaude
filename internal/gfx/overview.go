@@ -2,6 +2,7 @@ package gfx
 
 import (
 	"image"
+	"image/color"
 	"math"
 
 	"github.com/fogleman/gg"
@@ -9,12 +10,12 @@ import (
 
 const (
 	OverviewW = 960
-	OverviewH = 630
+	OverviewH = 778
 )
 
 const (
 	SignatureURL = "https://www.rudeops.com"
-	signatureY   = 614.0
+	signatureY   = 762.0
 )
 
 func SignatureRect() (x, y, w, h float64) {
@@ -84,10 +85,23 @@ type Tool struct {
 	Count int
 }
 
+type Product struct {
+	Key, Name string
+	Percent   float64
+}
+
+type RTK struct {
+	Today, Total, Rate string
+	Days               [7]float64
+	Letters            [7]string
+}
+
 type Overview struct {
 	Updated, Alert string
 	Limits         [2]Limit
 	Today          []Stat
+	Products       []Product
+	RTK            *RTK
 	Activity       []float64
 	ActivityNow    string
 	Sessions       []Session
@@ -127,23 +141,36 @@ func RenderOverview(o Overview, opt Options) *image.RGBA {
 		text(dc, s.Label, sx, 183, regular, 13.5, textLow, 0, 0)
 	}
 
-	label(dc, "ACTIVITÉ · 60 MIN", colX, 232)
-	text(dc, o.ActivityNow, right, 232, regular, 13.5, textMid, 1, 0)
-	drawActivity(dc, colX, 248, right-colX, 50, o.Activity)
+	if len(o.Products) > 0 {
+		label(dc, "SEMAINE PAR PRODUIT", colX, 232)
+		drawProducts(dc, colX, right, 252, o.Products)
+	}
 
-	dc.SetColor(border)
-	dc.SetLineWidth(1)
-	dc.DrawLine(left, 330, right, 330)
-	dc.Stroke()
-	label(dc, "SESSIONS", left, 362)
+	separator(dc, left, right, 334)
+
+	const rowY = 370
+	actRight := right
+	if o.RTK != nil {
+		actRight = colX - 60
+		drawRTK(dc, colX, right, rowY, o.RTK)
+		dc.SetColor(border)
+		dc.DrawLine(colX-30, rowY-18, colX-30, rowY+92)
+		dc.Stroke()
+	}
+	label(dc, "ACTIVITÉ · 60 MIN", left, rowY)
+	text(dc, o.ActivityNow, actRight, rowY, regular, 13.5, textMid, 1, 0)
+	drawActivity(dc, left, rowY+16, actRight-left, 68, o.Activity)
+
+	separator(dc, left, right, 484)
+	label(dc, "SESSIONS", left, 516)
 	if len(o.Sessions) == 0 {
-		text(dc, "aucune session active", left, 398, regular, 14.5, textLow, 0, 0)
+		text(dc, "aucune session active", left, 552, regular, 14.5, textLow, 0, 0)
 	}
 	for i, s := range o.Sessions {
-		drawSession(dc, left, right, 398+float64(i)*42, s, o.Pulse)
+		drawSession(dc, left, right, 552+float64(i)*42, s, o.Pulse)
 	}
 
-	const footY = 578
+	const footY = 728
 	fx := left
 	if len(o.Tools) > 0 {
 		fx = text(dc, "outils · 1 h", fx, footY, regular, 13.5, textLow, 0, 0) + 15
@@ -156,6 +183,87 @@ func RenderOverview(o Overview, opt Options) *image.RGBA {
 
 	drawSignature(dc)
 	return dc.Image().(*image.RGBA)
+}
+
+func separator(dc *canvas, left, right, y float64) {
+	dc.SetColor(border)
+	dc.SetLineWidth(1)
+	dc.DrawLine(left, y, right, y)
+	dc.Stroke()
+}
+
+func productColor(key string) color.Color {
+	switch key {
+	case "claude_code":
+		return yellow
+	case "chat":
+		return blue
+	case "cowork":
+		return purple
+	}
+	return textLow
+}
+
+func drawProducts(dc *canvas, x, right, y float64, ps []Product) {
+	const gap, h = 5.0, 6.0
+	total := 0.0
+	for _, p := range ps {
+		total += p.Percent
+	}
+	avail := right - x - gap*float64(len(ps)-1)
+	bx := x
+	for _, p := range ps {
+		w := math.Max(h, avail*p.Percent/total)
+		dc.SetColor(productColor(p.Key))
+		dc.DrawRoundedRectangle(bx, y-h/2, w, h, h/2)
+		dc.Fill()
+		bx += w + gap
+	}
+	lx := x
+	for _, p := range ps {
+		dc.SetColor(productColor(p.Key))
+		dc.DrawCircle(lx+4, y+26, 4)
+		dc.Fill()
+		lx = text(dc, p.Name, lx+14, y+31, regular, 13.5, textMid, 0, 0) + 6
+		lx = text(dc, itoa(p.Percent)+" %", lx, y+31, medium, 13.5, textHi, 0, 0) + 20
+	}
+}
+
+func drawRTK(dc *canvas, x, right, y float64, r *RTK) {
+	label(dc, "RTK · 7 JOURS", x, y)
+	text(dc, r.Rate+" % en moyenne", right, y, regular, 13.5, textMid, 1, 0)
+	for i, s := range []Stat{{Value: r.Today, Label: "économisés aujourd'hui"}, {Value: r.Total, Label: "au total"}} {
+		sx := x + float64(i)*175
+		text(dc, s.Value, sx, y+52, light, 38, textHi, 0, 0)
+		text(dc, s.Label, sx, y+77, regular, 13.5, textLow, 0, 0)
+	}
+
+	const step, bw, h = 19.0, 11.0, 50.0
+	bx := right - step*7 + (step-bw)/2
+	peak := 0.0
+	for _, v := range r.Days {
+		peak = math.Max(peak, v)
+	}
+	for i, v := range r.Days {
+		cx := bx + float64(i)*step
+		bh := 1.5
+		var c color.Color = track
+		if peak > 0 && v > 0 {
+			bh = math.Max(3, h*v/peak)
+			c = alpha(yellow, 0.5)
+			if i == len(r.Days)-1 {
+				c = yellow
+			}
+		}
+		dc.SetColor(c)
+		dc.DrawRoundedRectangle(cx, y+62-bh, bw, bh, 1.5)
+		dc.Fill()
+		lc := textLow
+		if i == len(r.Days)-1 {
+			lc = textHi
+		}
+		text(dc, r.Letters[i], cx+bw/2, y+80, medium, 11.5, lc, 0.5, 0)
+	}
 }
 
 func label(dc *canvas, s string, x, y float64) {
@@ -205,7 +313,7 @@ func drawActivity(dc *canvas, x, y, w, h float64, values []float64) {
 		peak = math.Max(peak, v)
 	}
 	step := w / float64(n)
-	bw := math.Max(1, step-2)
+	bw := math.Max(1, step-1.5)
 	for i, v := range values {
 		bx := x + float64(i)*step
 		bh := 1.5

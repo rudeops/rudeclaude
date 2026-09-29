@@ -2,6 +2,7 @@ package ui
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"image"
 	"image/png"
@@ -19,6 +20,7 @@ import (
 	"github.com/rudeops/rudeclaude/internal/activity"
 	"github.com/rudeops/rudeclaude/internal/gfx"
 	"github.com/rudeops/rudeclaude/internal/kitty"
+	"github.com/rudeops/rudeclaude/internal/rtk"
 )
 
 const imageFPS = 6
@@ -212,6 +214,12 @@ func (c *core) overview() gfx.Overview {
 		{Value: output, Label: "tokens générés"},
 		{Value: cache, Unit: "%", Label: "servis par le cache"},
 	}
+	for _, p := range c.products() {
+		o.Products = append(o.Products, gfx.Product{Key: p.key, Name: p.name, Percent: p.percent})
+	}
+	if r, ok := c.rtkInfo(); ok {
+		o.RTK = &gfx.RTK{Today: r.today, Total: r.total, Rate: r.rate, Days: r.days, Letters: r.letters}
+	}
 	for _, s := range c.sessions() {
 		state := sessionState(s)
 		o.Sessions = append(o.Sessions, gfx.Session{
@@ -250,6 +258,9 @@ func Snapshot(path string, demo bool) error {
 		}
 	}
 	c.refresh()
+	if !demo {
+		c.rtk, _ = rtk.Load(context.Background(), c.now)
+	}
 	f, err := os.Create(path)
 	if err != nil {
 		return err
