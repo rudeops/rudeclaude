@@ -1,0 +1,25 @@
+name: Plumber
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  score:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: getplumber/plumber@cd1ecdf0a0053f9b0cc123976bb369772d876af3
+        with:
+          score-push: true
+          soft-fail: true
+          upload-sarif: false
+          upload-artifacts: false

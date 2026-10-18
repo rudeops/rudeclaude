@@ -2,6 +2,8 @@
 
 **Français** · [English](README.en.md)
 
+[![Plumber Score](https://score.getplumber.io/github.com/rudeops/rudeclaude.svg)](https://score.getplumber.io/github.com/rudeops/rudeclaude)
+
 **Un outil propulsé par [RudeOps](https://www.rudeops.com), la newsletter de
 veille sur la tech en général et le DevOps en particulier.**
 
