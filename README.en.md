@@ -3,6 +3,7 @@
 [Français](README.md) · **English**
 
 [![CI](https://github.com/rudeops/rudeclaude/actions/workflows/ci.yml/badge.svg)](https://github.com/rudeops/rudeclaude/actions/workflows/ci.yml)
+[![govulncheck](https://github.com/rudeops/rudeclaude/actions/workflows/govulncheck.yml/badge.svg)](https://github.com/rudeops/rudeclaude/actions/workflows/govulncheck.yml)
 [![Plumber Score](https://score.getplumber.io/github.com/rudeops/rudeclaude.svg)](https://score.getplumber.io/github.com/rudeops/rudeclaude)
 [![Release](https://img.shields.io/github/v/tag/rudeops/rudeclaude?label=release&sort=semver&color=blue)](https://github.com/rudeops/rudeclaude/releases/latest)
 [![License](https://img.shields.io/github/license/rudeops/rudeclaude?color=blue)](LICENSE)
