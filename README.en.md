@@ -2,7 +2,11 @@
 
 [Français](README.md) · **English**
 
+[![CI](https://github.com/rudeops/rudeclaude/actions/workflows/ci.yml/badge.svg)](https://github.com/rudeops/rudeclaude/actions/workflows/ci.yml)
 [![Plumber Score](https://score.getplumber.io/github.com/rudeops/rudeclaude.svg)](https://score.getplumber.io/github.com/rudeops/rudeclaude)
+[![Release](https://img.shields.io/github/v/tag/rudeops/rudeclaude?label=release&sort=semver&color=blue)](https://github.com/rudeops/rudeclaude/releases/latest)
+[![License](https://img.shields.io/github/license/rudeops/rudeclaude?color=blue)](LICENSE)
+[![Newsletter RudeOps](https://img.shields.io/badge/newsletter-RudeOps-FEC824)](https://www.rudeops.com)
 
 **A tool powered by [RudeOps](https://www.rudeops.com), the newsletter
 about tech in general and DevOps in particular.**
