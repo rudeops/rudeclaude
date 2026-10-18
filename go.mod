@@ -1,6 +1,6 @@
 module github.com/rudeops/rudeclaude
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/charmbracelet/bubbletea v1.3.10
