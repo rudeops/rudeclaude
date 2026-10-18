@@ -72,9 +72,12 @@ func Show(w io.Writer, img *image.RGBA, id int, p Placement) error {
 	var z bytes.Buffer
 	zw, _ := zlib.NewWriterLevel(&z, zlib.BestSpeed)
 	b := img.Bounds()
+	row := make([]byte, b.Dx()*4)
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		off := img.PixOffset(b.Min.X, y)
-		zw.Write(img.Pix[off : off+b.Dx()*4])
+		copy(row, img.Pix[off:off+len(row)])
+		unpremultiply(row)
+		zw.Write(row)
 	}
 	zw.Close()
 	data := base64.StdEncoding.EncodeToString(z.Bytes())
@@ -96,6 +99,18 @@ func Show(w io.Writer, img *image.RGBA, id int, p Placement) error {
 	}
 	_, err := io.WriteString(w, out.String())
 	return err
+}
+
+func unpremultiply(px []byte) {
+	for i := 0; i < len(px); i += 4 {
+		a := uint32(px[i+3])
+		if a == 0 || a == 255 {
+			continue
+		}
+		for c := i; c < i+3; c++ {
+			px[c] = uint8(min(255, (uint32(px[c])*255+a/2)/a))
+		}
+	}
 }
 
 func Delete(w io.Writer, id int) error {

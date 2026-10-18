@@ -5,7 +5,7 @@
 **Un outil propulsé par [RudeOps](https://www.rudeops.com), la newsletter de
 veille sur la tech en général et le DevOps en particulier.**
 
-![rudeclaude en mode image (démo)](docs/capture-image.png)
+![rudeclaude en mode image (démo)](docs/demo-image.gif)
 
 **Claude Code travaille. rudeclaude compte.**
 
@@ -36,7 +36,8 @@ dans chaque session, pendant que je regarde ailleurs.
   des 7 derniers jours. Sans rtk, le bloc disparaît et l'activité prend toute
   la largeur. Aucune pression.
 - **Sessions** : chaque session active dans l'heure, avec son projet, sa
-  branche git, son modèle, la taille de son contexte et ce que fait Claude :
+  branche git, son modèle, la taille de son contexte (la jauge passe à
+  l'orange puis au rouge à l'approche de la limite) et ce que fait Claude :
   - vert : il travaille ("exécute une commande", "modifie un fichier"…) ;
   - jaune : il vous a posé une question et attend votre réponse. Il est
     patient, lui ;
@@ -82,11 +83,19 @@ C'est tout. Enfin, presque :
 |---|---|
 | `--interval 2m` | délai entre deux appels à l'API d'usage (1 min par défaut, 30 s minimum) |
 | `--render auto\|image\|text` | force le rendu (détecté automatiquement par défaut) |
+| `--lang fr\|en` | langue de l'interface (celle du système par défaut) |
 | `--demo` | données fictives, sans appel réseau ni lecture des journaux |
 | `--snapshot fichier.png` | exporte une image du tableau de bord, puis quitte |
 | `--version` | affiche la version, puis quitte |
 
 Touches : `r` pour rafraîchir, `q` pour quitter. Il n'y en a pas de troisième.
+
+### Langue
+
+rudeclaude parle français et anglais. Il suit la langue du système
+(`LC_ALL`, puis `LC_MESSAGES`, puis `LANG`) : le français si elle commence par
+`fr`, l'anglais dans tous les autres cas. `--lang` impose l'une ou l'autre.
+Le klingon n'est pas prévu.
 
 ### Rendus
 
@@ -96,7 +105,14 @@ Touches : `r` pour rafraîchir, `q` pour quitter. Il n'y en a pas de troisième.
 - **Texte** : partout ailleurs, y compris dans tmux, la même vue en
   caractères. Même vérité, moins de pixels.
 
-![rudeclaude en mode texte (démo)](docs/capture-texte.png)
+Les deux rendus s'adaptent à la taille de la fenêtre. L'image occupe toute la
+largeur, passe sur une seule colonne dans une fenêtre haute et étroite, et
+laisse la place au texte quand elle deviendrait trop petite pour être lue. Le
+texte suit la largeur de la fenêtre et range ses blocs secondaires quand la
+hauteur manque : tout tient dans un 80×24. Plus besoin de lui céder la moitié
+de l'écran.
+
+![rudeclaude en mode texte (démo)](docs/demo-texte.gif)
 
 ## Confidentialité et sécurité
 
@@ -142,8 +158,6 @@ branches. Relisez avant de partager une capture où traîne
   s'éternise, allez voir : il attend sûrement votre feu vert.
 - rtk découpe ses journées en UTC : juste après minuit, son "aujourd'hui"
   est encore un peu hier.
-- L'interface est en français. Je ne compte pas m'en excuser, mais d'autres
-  langues pourraient arriver dans de futures versions.
 
 ## Structure du code
 
@@ -153,6 +167,7 @@ internal/usage/         appel à l'API d'usage, jeton, cache partagé
 internal/activity/      suivi des sessions dans les journaux de Claude Code
 internal/rtk/           économies de tokens de rtk, s'il est installé
 internal/gfx/           dessin en images de la vue d'ensemble, police Inter
+internal/i18n/          textes de l'interface, en français et en anglais
 internal/kitty/         protocole graphique de kitty
 internal/ui/            boucle du mode image, repli texte (Bubble Tea)
 internal/theme/         couleurs du mode texte

@@ -9,8 +9,12 @@ import (
 
 type Options struct {
 	Scale       float64
+	Width       float64
+	Tall        bool
 	Transparent bool
 }
+
+func (o Options) TextSize() float64 { return bodySize * o.Scale }
 
 type canvas struct {
 	*gg.Context
@@ -30,6 +34,7 @@ var (
 	green   = hex(0x22C55E)
 	blue    = hex(0x60A5FA)
 	purple  = hex(0xA78BFA)
+	rail    = alpha(textHi, 0.14)
 )
 
 func fillColor(used float64) color.Color {
@@ -40,6 +45,17 @@ func fillColor(used float64) color.Color {
 		return orange
 	default:
 		return yellow
+	}
+}
+
+func contextColor(frac float64) color.Color {
+	switch {
+	case frac >= 0.9:
+		return red
+	case frac >= 0.7:
+		return orange
+	default:
+		return textMid
 	}
 }
 

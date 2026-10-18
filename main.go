@@ -8,18 +8,21 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 
+	"github.com/rudeops/rudeclaude/internal/i18n"
 	"github.com/rudeops/rudeclaude/internal/ui"
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
 
-const version = "0.2.0"
+const version = "0.3.0"
 
 func main() {
-	interval := flag.Duration("interval", time.Minute, "délai entre deux appels à l'API (minimum 30s)")
-	demo := flag.Bool("demo", false, "valeurs fictives, sans appeler l'API")
-	render := flag.String("render", "auto", "rendu : auto, image (protocole graphique de kitty) ou text")
-	snapshot := flag.String("snapshot", "", "écrit une image PNG du tableau de bord dans ce fichier, puis quitte")
-	showVersion := flag.Bool("version", false, "affiche la version, puis quitte")
+	flag.Usage = func() { fmt.Fprint(flag.CommandLine.Output(), i18n.T.Usage) }
+	interval := flag.Duration("interval", time.Minute, "")
+	demo := flag.Bool("demo", false, "")
+	render := flag.String("render", "auto", "")
+	snapshot := flag.String("snapshot", "", "")
+	showVersion := flag.Bool("version", false, "")
+	flag.Func("lang", "", i18n.Set)
 	flag.Parse()
 
 	if *showVersion {
@@ -27,6 +30,7 @@ func main() {
 		return
 	}
 	usage.UserAgent = "rudeclaude/" + version
+	ui.Version = version
 
 	*interval = max(*interval, 30*time.Second)
 
@@ -47,7 +51,7 @@ func main() {
 			exit(runText(*interval, *demo))
 		}
 	default:
-		exit(fmt.Errorf("rendu inconnu : %q (auto, image ou text)", *render))
+		exit(fmt.Errorf(i18n.T.UnknownRender, *render))
 	}
 }
 
@@ -58,7 +62,7 @@ func runText(interval time.Duration, demo bool) error {
 
 func exit(err error) {
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "rudeclaude :", err)
+		fmt.Fprintf(os.Stderr, i18n.T.Fatal, err)
 		os.Exit(1)
 	}
 }

@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rudeops/rudeclaude/internal/i18n"
 )
 
 // Undocumented endpoint. If this breaks one day, it was a feature.
@@ -22,10 +24,19 @@ const (
 	SevenDays = 7 * 24 * time.Hour
 )
 
-var (
-	ErrTokenExpired = errors.New("token expiré : lance claude pour le rafraîchir")
-	ErrRateLimited  = errors.New("API saturée")
+type Error int
+
+const (
+	ErrTokenExpired Error = iota
+	ErrRateLimited
 )
+
+func (e Error) Error() string {
+	if e == ErrRateLimited {
+		return i18n.T.RateLimited
+	}
+	return i18n.T.TokenExpired
+}
 
 type Window struct {
 	Utilization float64    `json:"utilization"`
@@ -91,14 +102,14 @@ func credentialsPath() string {
 func readToken() (string, error) {
 	raw, err := os.ReadFile(credentialsPath())
 	if err != nil {
-		return "", fmt.Errorf("lecture des identifiants Claude Code : %w", err)
+		return "", fmt.Errorf(i18n.T.ReadCredentials, err)
 	}
 	var c credentials
 	if err := json.Unmarshal(raw, &c); err != nil {
-		return "", fmt.Errorf("identifiants Claude Code illisibles : %w", err)
+		return "", fmt.Errorf(i18n.T.BadCredentials, err)
 	}
 	if c.ClaudeAiOauth.AccessToken == "" {
-		return "", errors.New("aucun token OAuth : connecte-toi avec claude")
+		return "", errors.New(i18n.T.NoToken)
 	}
 	if time.Now().After(time.UnixMilli(c.ClaudeAiOauth.ExpiresAt)) {
 		return "", ErrTokenExpired
@@ -121,7 +132,7 @@ func fetchRaw(ctx context.Context) ([]byte, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("appel API : %w", err)
+		return nil, fmt.Errorf(i18n.T.APICall, err)
 	}
 	defer resp.Body.Close()
 
@@ -129,7 +140,7 @@ func fetchRaw(ctx context.Context) ([]byte, error) {
 	case http.StatusOK:
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return nil, fmt.Errorf("lecture de la réponse : %w", err)
+			return nil, fmt.Errorf(i18n.T.ReadResponse, err)
 		}
 		return body, nil
 	case http.StatusUnauthorized:
@@ -137,7 +148,7 @@ func fetchRaw(ctx context.Context) ([]byte, error) {
 	case http.StatusTooManyRequests:
 		return nil, &RateLimitError{RetryAfter: retryAfter(resp.Header.Get("Retry-After"))}
 	default:
-		return nil, fmt.Errorf("réponse inattendue de l'API : %s", resp.Status)
+		return nil, fmt.Errorf(i18n.T.UnexpectedStatus, resp.Status)
 	}
 }
 
@@ -146,7 +157,7 @@ type RateLimitError struct {
 }
 
 func (e *RateLimitError) Error() string {
-	return "API saturée, nouvel essai dans " + e.RetryAfter.Round(time.Second).String()
+	return fmt.Sprintf(i18n.T.RateLimitedRetry, e.RetryAfter.Round(time.Second))
 }
 
 func (e *RateLimitError) Is(target error) bool { return target == ErrRateLimited }
@@ -165,7 +176,7 @@ func retryAfter(h string) time.Duration {
 func decode(body []byte) (*Report, error) {
 	var r Report
 	if err := json.Unmarshal(body, &r); err != nil {
-		return nil, fmt.Errorf("réponse illisible : %w", err)
+		return nil, fmt.Errorf(i18n.T.BadResponse, err)
 	}
 	return &r, nil
 }

@@ -5,7 +5,7 @@
 **A tool powered by [RudeOps](https://www.rudeops.com), the newsletter
 about tech in general and DevOps in particular.**
 
-![rudeclaude in image mode (demo)](docs/capture-image.png)
+![rudeclaude in image mode (demo)](docs/demo-image.en.gif)
 
 **Claude Code works. rudeclaude keeps count.**
 
@@ -34,9 +34,9 @@ activity, and what Claude is doing in each session, while I look elsewhere.
   7 days. Without rtk, the block disappears and activity takes the full width.
   No pressure.
 - **Sessions**: each session active in the last hour, with its project, git
-  branch, model, context size and what Claude is doing:
-  - green: it's working ("exécute une commande", running a command;
-    "modifie un fichier", editing a file…);
+  branch, model, context size (the gauge turns orange, then red, as it nears
+  the limit) and what Claude is doing:
+  - green: it's working ("running a command", "editing a file"…);
   - yellow: it asked you a question and is waiting for your answer. It's
     patient, at least;
   - grey: it's done, or the session is asleep.
@@ -81,11 +81,19 @@ That's it. Well, almost:
 |---|---|
 | `--interval 2m` | delay between two calls to the usage API (1 min by default, 30 s minimum) |
 | `--render auto\|image\|text` | forces the rendering (detected automatically by default) |
+| `--lang fr\|en` | interface language (system language by default) |
 | `--demo` | fake data, no network call and no log reading |
 | `--snapshot file.png` | exports an image of the dashboard, then exits |
 | `--version` | prints the version, then exits |
 
 Keys: `r` to refresh, `q` to quit. There is no third one.
+
+### Language
+
+rudeclaude speaks French and English. It follows the system language
+(`LC_ALL`, then `LC_MESSAGES`, then `LANG`): French if it starts with `fr`,
+English in every other case. `--lang` forces one or the other. Klingon is not
+on the roadmap.
 
 ### Rendering
 
@@ -95,7 +103,13 @@ Keys: `r` to refresh, `q` to quit. There is no third one.
 - **Text**: everywhere else, tmux included, the same view in characters.
   Same truth, fewer pixels.
 
-![rudeclaude in text mode (demo)](docs/capture-texte.png)
+Both renderings adapt to the window size. The image fills the whole width,
+switches to a single column in a tall, narrow window, and hands over to text
+when it would get too small to read. The text follows the window width and
+tucks away its secondary blocks when height runs out: everything fits in
+80×24. No need to give it half your screen anymore.
+
+![rudeclaude in text mode (demo)](docs/demo-texte.en.gif)
 
 ## Privacy and security
 
@@ -132,13 +146,11 @@ branches. Double-check before sharing a screenshot with
   product), but not towards activity. If the percentage climbs while activity
   doesn't move, that's you, on your phone.
 - A pending permission request (before running a command) leaves no trace in
-  the logs: the session stays displayed as "exécute une commande", with the
+  the logs: the session stays displayed as "running a command", with the
   elapsed time after 2 minutes. If it drags on, go have a look: it's probably
   waiting for your go-ahead.
 - rtk splits its days in UTC: right after midnight, its "today" is still a
   bit of yesterday.
-- The interface is in French. I don't intend to apologize for it, but other
-  languages may come in future versions.
 
 ## Code layout
 
@@ -148,6 +160,7 @@ internal/usage/         usage API call, token, shared cache
 internal/activity/      session tracking in Claude Code's logs
 internal/rtk/           rtk token savings, if installed
 internal/gfx/           image drawing of the overview, Inter font
+internal/i18n/          interface texts, in French and English
 internal/kitty/         kitty graphics protocol
 internal/ui/            image mode loop, text fallback (Bubble Tea)
 internal/theme/         text mode colors

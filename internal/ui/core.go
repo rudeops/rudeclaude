@@ -9,9 +9,12 @@ import (
 	"time"
 
 	"github.com/rudeops/rudeclaude/internal/activity"
+	"github.com/rudeops/rudeclaude/internal/i18n"
 	"github.com/rudeops/rudeclaude/internal/rtk"
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
+
+var Version string
 
 const (
 	maxBackoff   = 10 * time.Minute
@@ -76,7 +79,7 @@ func (c *core) alert() string {
 		return ""
 	}
 	if c.rateLimited() {
-		return "API saturée, nouvel essai dans " + formatDuration(c.nextFetch().Sub(c.now))
+		return fmt.Sprintf(i18n.T.RateLimitedRetry, formatDuration(c.nextFetch().Sub(c.now)))
 	}
 	return c.err.Error()
 }
@@ -109,8 +112,8 @@ func (c *core) limits() [2]limitInfo {
 		five, week = c.report.FiveHour, c.report.SevenDay
 	}
 	return [2]limitInfo{
-		c.limit("SESSION · 5 H", five, usage.FiveHours),
-		c.limit("SEMAINE", week, usage.SevenDays),
+		c.limit(i18n.T.FiveHours, five, usage.FiveHours),
+		c.limit(i18n.T.Week, week, usage.SevenDays),
 	}
 }
 
@@ -118,14 +121,14 @@ func (c *core) limit(label string, w *usage.Window, length time.Duration) limitI
 	info := limitInfo{label: label, elapsed: -1}
 	switch {
 	case c.report == nil && c.err == nil:
-		info.reset = "chargement…"
+		info.reset = i18n.T.Loading
 	case w == nil:
-		info.reset = "indisponible"
+		info.reset = i18n.T.Unavailable
 	default:
 		info.used = w.Utilization
 		if p, ok := w.Pace(length, c.now); ok {
 			info.elapsed = p.Elapsed
-			info.reset = "reset dans " + formatDuration(w.ResetsAt.Sub(c.now))
+			info.reset = fmt.Sprintf(i18n.T.ResetIn, formatDuration(w.ResetsAt.Sub(c.now)))
 		}
 	}
 	return info
@@ -167,45 +170,29 @@ func (c *core) sessions() []sessionInfo {
 }
 
 func doing(s activity.Session, now time.Time) string {
+	t := i18n.T
 	switch {
 	case s.State == activity.Idle:
-		return "inactive"
+		return t.Idle
 	case s.Tool == "AskUserQuestion":
-		return "te pose une question"
+		return t.Asking
 	case s.Interrupted:
-		return "interrompu"
+		return t.Interrupted
 	case s.State == activity.Waiting:
-		return "terminé"
+		return t.Finished
 	case s.Thinking:
-		return "réfléchit…"
+		return t.Thinking
 	case s.Tool == "":
-		return "rédige…"
+		return t.Writing
 	}
-	verb := toolVerbs[s.Tool]
+	verb := t.ToolVerbs[s.Tool]
 	if verb == "" {
-		verb = "utilise " + s.Tool
+		verb = fmt.Sprintf(t.Using, s.Tool)
 	}
 	if d := now.Sub(s.Since); d > 2*time.Minute {
 		verb += " · " + formatDuration(d)
 	}
 	return verb
-}
-
-var toolVerbs = map[string]string{
-	"Bash":         "exécute une commande",
-	"Read":         "lit un fichier",
-	"Edit":         "modifie un fichier",
-	"MultiEdit":    "modifie un fichier",
-	"Write":        "écrit un fichier",
-	"NotebookEdit": "modifie un notebook",
-	"Grep":         "cherche dans le code",
-	"Glob":         "cherche des fichiers",
-	"WebFetch":     "consulte le web",
-	"WebSearch":    "cherche sur le web",
-	"Agent":        "délègue à un agent",
-	"Task":         "délègue à un agent",
-	"TodoWrite":    "planifie",
-	"Skill":        "charge une compétence",
 }
 
 func modelName(id string) string {
@@ -242,13 +229,17 @@ func (c *core) today() (replies, output, cache string) {
 	return fmt.Sprint(t.Replies), formatTokens(float64(t.Output)), fmt.Sprint(int(math.Round(t.CacheRate() * 100)))
 }
 
+func (c *core) repliesLabel() string {
+	return i18n.T.Pick(c.snap.Today.Replies, i18n.T.Replies)
+}
+
 func (c *core) tools() []activity.ToolCount {
 	return c.snap.Tools[:min(maxTools, len(c.snap.Tools))]
 }
 
 func (c *core) activityText() string {
 	if c.snap.Rate < 1 {
-		return "au calme"
+		return i18n.T.Quiet
 	}
 	return formatTokens(c.snap.Rate) + " tokens/min"
 }
@@ -256,13 +247,6 @@ func (c *core) activityText() string {
 type productInfo struct {
 	key, name string
 	percent   float64
-}
-
-var productNames = map[string]string{
-	"claude_code": "Claude Code",
-	"chat":        "Chat",
-	"cowork":      "Cowork",
-	"other":       "Autre",
 }
 
 func (c *core) products() []productInfo {
@@ -274,7 +258,7 @@ func (c *core) products() []productInfo {
 		if r.Percent <= 0 {
 			continue
 		}
-		name := productNames[r.Key]
+		name := i18n.T.Products[r.Key]
 		if name == "" {
 			name = r.DisplayName
 		}
@@ -289,8 +273,6 @@ type rtkInfo struct {
 	letters            [rtk.Days]string
 }
 
-var dayLetters = [7]string{"D", "L", "M", "M", "J", "V", "S"}
-
 func (c *core) rtkInfo() (info rtkInfo, ok bool) {
 	s := c.rtk
 	if s == nil {
@@ -301,7 +283,7 @@ func (c *core) rtkInfo() (info rtkInfo, ok bool) {
 	info.rate = fmt.Sprint(int(math.Round(s.Rate() * 100)))
 	for i, d := range s.Days {
 		info.days[i] = float64(d.Saved)
-		info.letters[i] = dayLetters[d.Date.Weekday()]
+		info.letters[i] = i18n.T.DayLetters[d.Date.Weekday()]
 	}
 	return info, true
 }
@@ -311,52 +293,53 @@ func (c *core) credits() string {
 		return ""
 	}
 	sp := c.report.Spend
-	s := "crédits extra · " + formatMoney(*sp.Used)
+	s := fmt.Sprintf(i18n.T.Credits, formatMoney(*sp.Used))
 	if sp.Limit != nil {
-		s += " sur " + formatMoney(*sp.Limit)
+		s += fmt.Sprintf(i18n.T.Of, formatMoney(*sp.Limit))
 	}
 	return s
 }
 
 func (c *core) status() string {
+	t := i18n.T
 	switch {
 	case c.demo:
-		return "mode démo"
+		return t.Demo
 	case c.fetchedAt.IsZero():
-		return "connexion…"
+		return t.Connecting
 	case c.rateLimited():
-		return "mis à jour il y a " + formatDuration(c.now.Sub(c.fetchedAt)) +
-			" · API saturée, nouvel essai dans " + formatDuration(c.nextFetch().Sub(c.now))
+		return fmt.Sprintf(t.Updated, formatDuration(c.now.Sub(c.fetchedAt))) + " · " +
+			fmt.Sprintf(t.RateLimitedRetry, formatDuration(c.nextFetch().Sub(c.now)))
 	default:
-		return "mis à jour il y a " + formatDuration(c.now.Sub(c.fetchedAt))
+		return fmt.Sprintf(t.Updated, formatDuration(c.now.Sub(c.fetchedAt)))
 	}
 }
 
 func formatDuration(d time.Duration) string {
-	d = max(0, d)
+	d, t := max(0, d), i18n.T
 	switch {
 	case d >= 24*time.Hour:
-		return fmt.Sprintf("%d j %d h", int(d.Hours())/24, int(d.Hours())%24)
+		return fmt.Sprintf(t.Days, int(d.Hours())/24, int(d.Hours())%24)
 	case d >= time.Hour:
-		return fmt.Sprintf("%d h %02d", int(d.Hours()), int(d.Minutes())%60)
+		return fmt.Sprintf(t.Hours, int(d.Hours()), int(d.Minutes())%60)
 	case d >= time.Minute:
-		return fmt.Sprintf("%d min", int(d.Minutes()))
+		return fmt.Sprintf(t.Minutes, int(d.Minutes()))
 	default:
-		return fmt.Sprintf("%d s", int(d.Seconds()))
+		return fmt.Sprintf(t.Seconds, int(d.Seconds()))
 	}
 }
 
 func formatAge(d time.Duration) string {
 	if d < 30*time.Second {
-		return "à l'instant"
+		return i18n.T.JustNow
 	}
-	return "il y a " + formatDuration(d)
+	return fmt.Sprintf(i18n.T.Ago, formatDuration(d))
 }
 
 func formatTokens(n float64) string {
 	switch {
 	case n >= 999_500:
-		return strings.Replace(fmt.Sprintf("%.1fM", n/1e6), ".", ",", 1)
+		return strings.Replace(fmt.Sprintf("%.1fM", n/1e6), ".", i18n.T.Decimal, 1)
 	case n >= 999.5:
 		return fmt.Sprintf("%.0fk", n/1e3)
 	default:
@@ -367,10 +350,16 @@ func formatTokens(n float64) string {
 var currencies = map[string]string{"EUR": "€", "USD": "$", "GBP": "£"}
 
 func formatMoney(m usage.Money) string {
-	sym := currencies[m.Currency]
-	if sym == "" {
-		sym = m.Currency
+	v := strings.Replace(fmt.Sprintf("%.*f", m.Exponent, m.Value()), ".", i18n.T.Decimal, 1)
+	sym, known := currencies[m.Currency]
+	switch {
+	case !known:
+		return v + " " + m.Currency
+	case i18n.T.SymbolFirst:
+		return sym + v
+	default:
+		return v + " " + sym
 	}
-	v := strings.Replace(fmt.Sprintf("%.*f", m.Exponent, m.Value()), ".", ",", 1)
-	return v + " " + sym
 }
+
+func percent(s string) string { return s + i18n.T.Percent }

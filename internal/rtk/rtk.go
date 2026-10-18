@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"sync/atomic"
 	"time"
+
+	"github.com/rudeops/rudeclaude/internal/i18n"
 )
 
 const (
@@ -59,7 +61,7 @@ func Load(ctx context.Context, now time.Time) (*Stats, error) {
 	defer cancel()
 	out, err := exec.CommandContext(ctx, path, "gain", "--daily", "--format", "json").Output()
 	if err != nil {
-		return nil, fmt.Errorf("rtk gain : %w", err)
+		return nil, fmt.Errorf(i18n.T.RTKFailed, err)
 	}
 	return parse(out, now)
 }
@@ -67,7 +69,7 @@ func Load(ctx context.Context, now time.Time) (*Stats, error) {
 func parse(raw []byte, now time.Time) (*Stats, error) {
 	var r report
 	if err := json.Unmarshal(raw, &r); err != nil {
-		return nil, fmt.Errorf("rtk gain illisible : %w", err)
+		return nil, fmt.Errorf(i18n.T.RTKBadOutput, err)
 	}
 	s := &Stats{Total: r.Summary.TotalSaved}
 	today := now.UTC().Truncate(24 * time.Hour)

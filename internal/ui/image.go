@@ -19,6 +19,7 @@ import (
 
 	"github.com/rudeops/rudeclaude/internal/activity"
 	"github.com/rudeops/rudeclaude/internal/gfx"
+	"github.com/rudeops/rudeclaude/internal/i18n"
 	"github.com/rudeops/rudeclaude/internal/kitty"
 	"github.com/rudeops/rudeclaude/internal/rtk"
 )
@@ -39,10 +40,10 @@ func GraphicsSupported() bool {
 }
 
 type layout struct {
-	scale    float64
-	at       kitty.Placement
-	tooSmall bool
-	link     string
+	opt  gfx.Options
+	at   kitty.Placement
+	text bool
+	link string
 }
 
 func computeLayout(sz kitty.Size) layout {
@@ -51,23 +52,26 @@ func computeLayout(sz kitty.Size) layout {
 		cw, ch = 9, 18
 	}
 	pxW, pxH := float64(sz.Cols)*cw, float64(sz.Rows)*ch
-	scale := math.Min(2.5, math.Min(pxW*0.96/gfx.OverviewW, pxH*0.96/gfx.OverviewH))
-	x := math.Floor((pxW - math.Round(gfx.OverviewW*scale)) / 2)
-	y := math.Floor((pxH - math.Round(gfx.OverviewH*scale)) / 2)
+	opt := gfx.Fit(pxW, pxH)
+	opt.Transparent = true
+	w, h := opt.Size()
+	x := math.Floor((pxW - math.Round(w*opt.Scale)) / 2)
+	y := math.Floor((pxH - math.Round(h*opt.Scale)) / 2)
 	col, row := math.Floor(x/cw), math.Floor(y/ch)
 	return layout{
-		scale: scale,
+		opt: opt,
 		at: kitty.Placement{
 			Col: int(col) + 1, Row: int(row) + 1,
 			OffX: int(x - col*cw), OffY: int(y - row*ch),
 		},
-		tooSmall: scale < 0.55,
-		link:     signatureLink(x, y, scale, cw, ch),
+		text: opt.TextSize() < ch/2,
+		link: signatureLink(opt, x, y, cw, ch),
 	}
 }
 
-func signatureLink(x, y, scale, cw, ch float64) string {
-	sx, sy, sw, sh := gfx.SignatureRect()
+func signatureLink(opt gfx.Options, x, y, cw, ch float64) string {
+	scale := opt.Scale
+	sx, sy, sw, sh := gfx.SignatureRect(opt)
 	c0 := int(math.Floor((x+sx*scale)/cw)) + 1
 	c1 := int(math.Ceil((x + (sx+sw)*scale) / cw))
 	row := int(math.Floor((y+(sy+sh/2)*scale)/ch)) + 1
@@ -139,9 +143,11 @@ func RunImage(interval time.Duration, demo bool) error {
 	c.refresh()
 
 	var (
+		sz     kitty.Size
 		lay    layout
 		screen buffered
 		shown  gfx.Overview
+		view   string
 		frames = time.NewTicker(time.Second / imageFPS)
 		polls  = time.NewTicker(pollInterval)
 		resize = true
@@ -172,23 +178,25 @@ func RunImage(interval time.Duration, demo bool) error {
 				fetch(interval)
 			}
 			if resize {
-				sz, err := kitty.GetSize(os.Stdin)
-				if err != nil {
+				var err error
+				if sz, err = kitty.GetSize(os.Stdin); err != nil {
 					return err
 				}
 				lay = computeLayout(sz)
 				kitty.DeleteAll(w)
 				fmt.Fprint(w, "\x1b[2J")
-				screen.live, resize = false, false
-				if lay.tooSmall {
-					fmt.Fprint(w, "\x1b[1;1Hagrandis la fenêtre pour afficher rudeclaude · q pour quitter")
-				} else {
+				screen.live, view, resize = false, "", false
+				if !lay.text {
 					fmt.Fprint(w, lay.link)
 				}
 			}
-			if o := c.overview(); !lay.tooSmall && (!screen.live || !reflect.DeepEqual(o, shown)) {
-				img := gfx.RenderOverview(o, gfx.Options{Scale: lay.scale, Transparent: true})
-				screen.show(w, img, lay.at)
+			if lay.text {
+				if v := (textModel{core: c, width: sz.Cols, height: sz.Rows}).View(); v != view {
+					fmt.Fprint(w, "\x1b[H"+strings.ReplaceAll(v, "\n", "\r\n"))
+					view = v
+				}
+			} else if o := c.overview(); !screen.live || !reflect.DeepEqual(o, shown) {
+				screen.show(w, gfx.RenderOverview(o, lay.opt), lay.at)
 				shown = o
 			}
 			w.Flush()
@@ -198,6 +206,7 @@ func RunImage(interval time.Duration, demo bool) error {
 
 func (c *core) overview() gfx.Overview {
 	o := gfx.Overview{
+		Version:     Version,
 		Updated:     c.status(),
 		ActivityNow: c.activityText(),
 		Activity:    slices.Clone(c.snap.Minutes[:]),
@@ -210,9 +219,9 @@ func (c *core) overview() gfx.Overview {
 	}
 	replies, output, cache := c.today()
 	o.Today = []gfx.Stat{
-		{Value: replies, Label: "réponses"},
-		{Value: output, Label: "tokens générés"},
-		{Value: cache, Unit: "%", Label: "servis par le cache"},
+		{Value: replies, Label: c.repliesLabel()},
+		{Value: output, Label: i18n.T.Generated},
+		{Value: cache, Unit: "%", Label: i18n.T.FromCache},
 	}
 	for _, p := range c.products() {
 		o.Products = append(o.Products, gfx.Product{Key: p.key, Name: p.name, Percent: p.percent})
@@ -266,5 +275,5 @@ func Snapshot(path string, demo bool) error {
 		return err
 	}
 	defer f.Close()
-	return png.Encode(f, gfx.RenderOverview(c.overview(), gfx.Options{Scale: 2}))
+	return png.Encode(f, gfx.RenderOverview(c.overview(), gfx.Options{Scale: 2, Width: 1000}))
 }
