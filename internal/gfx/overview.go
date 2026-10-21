@@ -361,10 +361,32 @@ func activityBars(dc *canvas, x, y, w, h float64, values []float64) {
 		if v == 0 {
 			c = track
 		}
+		if i == n-1 && v > 0 {
+			hatch(dc, bx, y+h-bh, bw, bh, math.Min(1.5, bw/2), c)
+			continue
+		}
 		dc.SetColor(alpha(c, 1-0.65*age))
 		dc.DrawRoundedRectangle(bx, y+h-bh, bw, bh, math.Min(1.5, bw/2))
 		dc.Fill()
 	}
+}
+
+// hatch dessine une barre hachurée en diagonale : la valeur est encore en
+// cours d'accumulation (minute ou jour non terminé).
+func hatch(dc *canvas, x, y, w, h, r float64, c color.Color) {
+	dc.DrawRoundedRectangle(x, y, w, h, r)
+	dc.SetColor(alpha(c, 0.22))
+	dc.Fill()
+	dc.DrawRoundedRectangle(x, y, w, h, r)
+	dc.Clip()
+	dc.SetColor(c)
+	dc.SetLineWidth(1.6)
+	const gap = 4.0
+	for off := -h; off < w+h; off += gap {
+		dc.DrawLine(x+off, y+h, x+off+h, y)
+		dc.Stroke()
+	}
+	dc.ResetClip()
 }
 
 func drawRTK(dc *canvas, r *RTK, x, right, y float64) {
@@ -397,8 +419,12 @@ func drawRTK(dc *canvas, r *RTK, x, right, y float64) {
 			}
 		}
 		dc.SetColor(c)
-		dc.DrawRoundedRectangle(cx, y+60-bh, bw, bh, 1.5)
-		dc.Fill()
+		if i == len(r.Days)-1 && v > 0 {
+			hatch(dc, cx, y+60-bh, bw, bh, 1.5, c)
+		} else {
+			dc.DrawRoundedRectangle(cx, y+60-bh, bw, bh, 1.5)
+			dc.Fill()
+		}
 		lc := textLow
 		if i == len(r.Days)-1 {
 			lc = textHi

@@ -3,6 +3,7 @@ package theme
 const (
 	YellowHex = "#FEC824"
 	OchreHex  = "#A38319"
+	AmberHex  = "#6E5B16"
 	OrangeHex = "#FF8C28"
 	RedHex    = "#EF4444"
 	GreenHex  = "#22C55E"

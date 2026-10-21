@@ -34,6 +34,7 @@ var (
 	labelStyle  = style(theme.DimHex).Bold(true)
 	yellowStyle = style(theme.YellowHex)
 	ochreStyle  = style(theme.OchreHex)
+	amberStyle  = style(theme.AmberHex)
 	greenStyle  = style(theme.GreenHex)
 	redStyle    = style(theme.RedHex)
 	trackStyle  = style(theme.TrackHex)
@@ -373,7 +374,7 @@ func (m textModel) rtkLines(w, rows int) []string {
 	for i, v := range r.days {
 		st, lt := ochreStyle, dimStyle
 		if i == len(r.days)-1 {
-			st, lt = yellowStyle, hiStyle
+			st, lt = amberStyle, hiStyle
 		}
 		for row, cell := range column(v, slices.Max(r.days[:]), rows, st) {
 			bars[row] = append(bars[row], cell)
@@ -515,6 +516,9 @@ func sparkline(values []float64, w, rows int) []string {
 		st := yellowStyle
 		if pos < float64(n)*2/3 {
 			st = ochreStyle
+		}
+		if i == w-1 {
+			st = amberStyle
 		}
 		for r, cell := range column(v, peak, rows, st) {
 			lines[r].WriteString(cell)
