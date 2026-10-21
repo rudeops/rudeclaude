@@ -319,13 +319,16 @@ func (t *Tracker) prune(now time.Time) {
 func (t *Tracker) Snapshot(now time.Time) Snapshot {
 	snap := Snapshot{Today: t.today}
 
+	// Les barres sont alignées sur les minutes d'horloge : sans cela, les
+	// bornes glissent avec `now` et l'historique bouge à chaque rafraîchissement.
+	minute := now.Truncate(time.Minute)
 	for _, p := range t.points {
-		age := int(now.Sub(p.at) / time.Minute)
+		age := int(minute.Sub(p.at.Truncate(time.Minute)) / time.Minute)
 		if age >= 0 && age < len(snap.Minutes) {
 			snap.Minutes[len(snap.Minutes)-1-age] += float64(p.tokens)
-			if age < 5 {
-				snap.Rate += float64(p.tokens) / 5
-			}
+		}
+		if d := now.Sub(p.at); d >= 0 && d < 5*time.Minute {
+			snap.Rate += float64(p.tokens) / 5
 		}
 	}
 
