@@ -110,3 +110,38 @@ func TestTracker(t *testing.T) {
 		t.Errorf("après 20 min : %+v, attendu inactive", s)
 	}
 }
+
+func TestMinutesAlignees(t *testing.T) {
+	tr := NewTracker()
+	at := time.Date(2026, 1, 1, 12, 9, 50, 0, time.UTC)
+	tr.points = []point{{at, 800}}
+
+	// Dans la même minute d'horloge, l'événement reste dans la même barre.
+	for _, now := range []time.Time{
+		time.Date(2026, 1, 1, 12, 10, 5, 0, time.UTC),
+		time.Date(2026, 1, 1, 12, 10, 59, 0, time.UTC),
+	} {
+		snap := tr.Snapshot(now)
+		if got := snap.Minutes[len(snap.Minutes)-2]; got != 800 {
+			t.Errorf("à %s : barre précédente = %v, attendu 800", now.Format("15:04:05"), got)
+		}
+		if got := snap.Minutes[len(snap.Minutes)-1]; got != 0 {
+			t.Errorf("à %s : minute en cours = %v, attendu 0", now.Format("15:04:05"), got)
+		}
+	}
+
+	// À la minute suivante, il glisse d'un cran.
+	snap := tr.Snapshot(time.Date(2026, 1, 1, 12, 11, 0, 0, time.UTC))
+	if got := snap.Minutes[len(snap.Minutes)-3]; got != 800 {
+		t.Errorf("à 12:11:00 : barre il y a 2 minutes = %v, attendu 800", got)
+	}
+}
+
+func TestDebitGlissant(t *testing.T) {
+	tr := NewTracker()
+	now := time.Date(2026, 1, 1, 12, 10, 0, 0, time.UTC)
+	tr.points = []point{{now.Add(-4*time.Minute - 59*time.Second), 1000}, {now.Add(-5 * time.Minute), 1000}}
+	if got := tr.Snapshot(now).Rate; got != 200 {
+		t.Errorf("débit = %v, attendu 200 (fenêtre glissante de 5 minutes)", got)
+	}
+}
