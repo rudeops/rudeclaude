@@ -116,7 +116,6 @@ func TestMinutesAlignees(t *testing.T) {
 	at := time.Date(2026, 1, 1, 12, 9, 50, 0, time.UTC)
 	tr.points = []point{{at, 800}}
 
-	// Dans la même minute d'horloge, l'événement reste dans la même barre.
 	for _, now := range []time.Time{
 		time.Date(2026, 1, 1, 12, 10, 5, 0, time.UTC),
 		time.Date(2026, 1, 1, 12, 10, 59, 0, time.UTC),
@@ -130,7 +129,6 @@ func TestMinutesAlignees(t *testing.T) {
 		}
 	}
 
-	// À la minute suivante, il glisse d'un cran.
 	snap := tr.Snapshot(time.Date(2026, 1, 1, 12, 11, 0, 0, time.UTC))
 	if got := snap.Minutes[len(snap.Minutes)-3]; got != 800 {
 		t.Errorf("à 12:11:00 : barre il y a 2 minutes = %v, attendu 800", got)

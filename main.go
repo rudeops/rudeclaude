@@ -13,7 +13,7 @@ import (
 	"github.com/rudeops/rudeclaude/internal/usage"
 )
 
-const version = "0.3.1"
+const version = "0.4.0"
 
 func main() {
 	flag.Usage = func() { fmt.Fprint(flag.CommandLine.Output(), i18n.T.Usage) }

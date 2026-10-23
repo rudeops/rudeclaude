@@ -371,8 +371,6 @@ func activityBars(dc *canvas, x, y, w, h float64, values []float64) {
 	}
 }
 
-// hatch dessine une barre hachurée en diagonale : la valeur est encore en
-// cours d'accumulation (minute ou jour non terminé).
 func hatch(dc *canvas, x, y, w, h, r float64, c color.Color) {
 	dc.DrawRoundedRectangle(x, y, w, h, r)
 	dc.SetColor(alpha(c, 0.22))
