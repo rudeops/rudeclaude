@@ -57,7 +57,7 @@ dans chaque session, pendant que je regarde ailleurs.
 - **Linux.** macOS n'est pas encore pris en charge : Claude Code y range ses
   identifiants dans le trousseau, et rudeclaude ne sait pas encore l'ouvrir.
 - **Claude Code**, connecté avec un abonnement Claude (Pro ou Max).
-- **Go 1.27.2** ou plus récent, pour compiler.
+- **Go 1.27.3** ou plus récent, pour compiler.
 - Un terminal en couleurs 24 bits. Pour le rendu en images, un terminal qui
   parle le [protocole graphique de kitty](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
   (Ghostty, kitty, WezTerm, Konsole…).

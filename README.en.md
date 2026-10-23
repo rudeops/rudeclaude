@@ -55,7 +55,7 @@ activity, and what Claude is doing in each session, while I look elsewhere.
 - **Linux.** macOS isn't supported yet: Claude Code keeps its credentials in
   the Keychain there, and rudeclaude doesn't know how to open it yet.
 - **Claude Code**, signed in with a Claude subscription (Pro or Max).
-- **Go 1.27.2** or newer, to build.
+- **Go 1.27.3** or newer, to build.
 - A 24-bit color terminal. For image rendering, a terminal that speaks the
   [kitty graphics protocol](https://sw.kovidgoyal.net/kitty/graphics-protocol/)
   (Ghostty, kitty, WezTerm, Konsole…).
